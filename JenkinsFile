@@ -22,7 +22,7 @@ pipeline {
             pwd
             cd pyfiles
             ls -lrt
-            chmod 777 output.py
+            //chmod 777 output.py
             cd ..
             cp pyfiles/output.py output.py
             
