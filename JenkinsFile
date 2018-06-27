@@ -1,53 +1,101 @@
-pipeline {
-	agent { node { label 'Node_Assin' } } 
-	
+    pipeline {
 
-	stages{
-	stage('core-deploy') {
+    	agent { node { label 'Node_Assin' } } 
+    	
+    	parameters {
+            string(defaultValue: "", description: 'Enter Your Name', name: 'MyName')
+                }
+    	environment 
+                { 
+                   cName=''
             
-            environment 
-            { 
-                SHELL       ='/bin/sh'
-        
+                }
+    	stages{
+    	    
+    	stage('first stage') {
+                
+                environment 
+                { 
+                    SHELL       ='/bin/sh'
+            
+                }
+            
+                steps {
+                
+                
+                checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'pyfiles']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7af48099-1db5-4eb9-9e1d-ffcc3d371f9f', url: 'https://github.com/kingshuk111/python.git']]])
+                checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7af48099-1db5-4eb9-9e1d-ffcc3d371f9f', url: 'https://github.com/kingshuk111/shell-script.git']]])
+                
+    
+                sh """#!/bin/bash 
+                pwd
+                cd pyfiles
+                ls -lrt
+                cd ..
+                cp pyfiles/output.py output.py
+                
+                sh script.sh
+                echo $myname > experian
+                cat experian
+                """
+                }
             }
-        
-            steps {
-            
-            //checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7af48099-1db5-4eb9-9e1d-ffcc3d371f9f', url: 'https://github.com/kingshuk111/shell-script.git'], [credentialsId: '7af48099-1db5-4eb9-9e1d-ffcc3d371f9f', url: 'https://github.com/kingshuk111/python.git']]])
-            checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'pyfiles']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7af48099-1db5-4eb9-9e1d-ffcc3d371f9f', url: 'https://github.com/kingshuk111/python.git']]])
-            checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7af48099-1db5-4eb9-9e1d-ffcc3d371f9f', url: 'https://github.com/kingshuk111/shell-script.git']]])
-            
-
-            sh """#!/bin/bash 
-            pwd
-            cd pyfiles
-            ls -lrt
-            //chmod 777 output.py
-            cd ..
-            cp pyfiles/output.py output.py
-            
-            sh script.sh
-            
-            """
-            //bat pwd
-            //bat "ls -lrt"
-            
-            //bat 'echo "**************************************Deployment Starts *************************************************"'
-           //bat '''
-           // echo "Hello"
-          // '''
-            //}
-            //}
-            //}
+            stage('second stage') {
+                steps {
+                
+                
+                checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'html']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: '7af48099-1db5-4eb9-9e1d-ffcc3d371f9f', url: 'https://github.com/kingshuk111/html.git']]])
+               
+                
+    
+                sh """#!/bin/bash 
+                pwd
+                
+                cp experian html/experian
+                
+                
+                cd html
+                pwd
+                ls -lrt
+                sh script.sh>output.log
+                echo "$BUILD_URL""execution/node/3/ws/html/output.log"
+                echo "$BUILD_URL""execution/node/3/ws/html/jenkins.html"
+                cd ..
+                pwd
+                ls -lrt
+                touch test.txt
+                git log -1 --pretty=%an > test.txt
+                ls -lrt
+                cat test.txt
+                """
+                script {
+                  cName = readFile 'test.txt'
+                }
+                
+                sh """#!/bin/bash -xel
+                
+                echo "${cName}"
+                """
+                }
+            }
+        stage('test')
+        {
+            steps{
+            sh """#!/bin/bash -xel
+                
+                echo "${cName}"
+                """
             }
         }
-	}
-	
-    post {
+    	}
+    	
+        post {
             success{
                      
-                emailext  attachmentsPattern: '', body: '''<html>
+                emailext  attachmentsPattern: 'html/output.log, html/jenkins.html', body: '''<html>
                 <body>
+                <j:set var="CommiterName" value="${build.getEnvironment('cName')}" />
+                <j:set var="myVar" value="${buildEnv.get('cName')}" />
                 <h6 style="color:green;"> BUILD SUCCESSFULL </h6>
                 <table>
                         
@@ -66,13 +114,18 @@ pipeline {
                             <td>:</td>
                             <td >$BUILD_NUMBER</td>
                         </tr>
+                        <tr>
+                            <td >Last comitter</td>
+                            <td>:</td>
+                            <td > ${ENV, var='cName'} </td>
+                        </tr>
                         
                         
                     </table>
                     <h4 style="color:blue;"> CONSOLE LOG </h4>
                   <pre>${BUILD_LOG, escapeHtml=true}</pre>
                   </body>
-                 </html>''', mimeType: 'text/html', subject: 'deploy pipeline', to: 'edara.nagasamyuktha@gmail.com,kingshukbedi@gmail.com,badal.singh2432@gmail.com'
+                 </html>''', mimeType: 'text/html', subject: 'deploy pipeline', to: 'edara.nagasamyuktha@gmail.com'
 
                 }
 
@@ -104,11 +157,10 @@ pipeline {
                     <h4 style="color:blue;"> CONSOLE LOG </h4>
                   <pre>${BUILD_LOG, escapeHtml=true}</pre>
                   </body>
-                 </html>''', mimeType: 'text/html', subject: 'deploy pipeline', to: 'edara.nagasamyuktha@gmail.com,kingshukbedi@gmail.com,badal.singh2432@gmail.com'
+                 </html>''', mimeType: 'text/html', subject: 'deploy pipeline', to: 'edara.nagasamyuktha@gmail.com'
   
              }
 
         }
-
-
-}
+    
+    }
